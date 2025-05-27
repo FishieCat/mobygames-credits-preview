@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mobygames Credits Preview</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: #111;
+      color: #eee;
+      font-family: sans-serif;
+      width: 100%;
+      height: 100%;
+      min-width: 640px;
+      min-height: 480px;
+      overflow: hidden;
+    }
+
+    #container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      padding: 1rem;
+      box-sizing: border-box;
+    }
+
+    textarea#input {
+      width: 100%;
+      height: 80%;
+      max-width: 960px;
+      background-color: #222;
+      color: #eee;
+      border: none;
+      padding: 1rem;
+      font-size: 1rem;
+      resize: none;
+      box-sizing: border-box;
+    }
+
+    button#preview {
+      margin-top: 1rem;
+      padding: 0.5rem 1rem;
+      background-color: #005a9e;
+      color: #eee;
+      border: none;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+
+    #output {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #111;
+      color: #eee;
+      overflow-y: auto;
+      padding: 2rem;
+      box-sizing: border-box;
+      display: none;
+    }
+
+    button#close {
+      position: fixed;
+      top: 1rem;
+      left: 1rem;
+      background-color: #005a9e;
+      color: #eee;
+      border: none;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      cursor: pointer;
+      z-index: 1000;
+    }
+	
+	/* structure */
+	#outputContent {
+		font-size: 135%;
+		text-align: center;
+	}
+
+	/* Group Styles */
+	.group {
+	  color: #d9c593;
+	  font-variant: small-caps;
+	  font-size: 250%;
+	  font-weight: bold;
+	  line-height: 250%;
+	  margin-top: 1em;
+	}
+
+	/* Role Styles */
+	.role {
+		color: #ffe66d;
+	  font-variant: small-caps;
+	  font-size: 150%;
+	  font-weight: bold;
+	  line-height: 150%;
+	  margin-top: 1.5em;
+	  margin-bottom: .5em;
+	}
+	
+	.name {
+		color: rgb(232, 232, 232);
+		line-height: 1.5em;
+	}
+	
+	.error {
+		background-color: red;
+		color: #111;
+	}
+	
+	.warning {
+		background-color: yellow;
+		color: #111;
+	}
+	
+	.info {
+		background-color: grey;
+		color: #111;
+	}
+	
+	/* Notes */
+	.note {
+	  display: inline;
+	  margin-left: 0.5em;
+	  font-weight: normal;
+	}
+
+	.note-trigger {
+	  color: #007acc;
+	  cursor: pointer;
+	  text-decoration: underline;
+	  margin-left: 0.25em;
+	  user-select: none;
+	}
+
+	.note-long {
+	  display: inline-block;
+	  background: #222;
+	  color: #eee;
+	  padding: 0.25em 0.5em;
+	  margin-left: 0.5em;
+	  font-size: 90%;
+	  z-index: 2;
+	  border-left: 2px solid #555;
+	}
+
+  </style>
+</head>
+<body>
+  <div id="container">
+    <h1>Mobygames Credits Preview</h1>
+    <textarea id="input" placeholder="Group_1&#10;&#10;Role_1&#10;Name_1_First Name_1_Last&#10;Name_2_First Name_2_Last (&#34;Nick&#34;)&#10;&#10;Group_2&#10;&#10;Role_2&#10;Nick&#10;N. Name_3_Last&#10;..."></textarea>
+    <button id="preview">Preview</button>
+  </div>
+
+  <div id="output">
+    <button id="close">X</button>
+    <div id="outputContent"></div>
+  </div>
+
+  <script>
+
+// framework
+
+function processInput(text) {
+    // Placeholder: identity function
+    return text;
+}
+
+const previewBtn = document.getElementById('preview');
+const closeBtn = document.getElementById('close');
+const input = document.getElementById('input');
+const output = document.getElementById('output');
+const outputContent = document.getElementById('outputContent');
+
+previewBtn.addEventListener('click', () => {
+    const raw = input.value;
+    const result = check_credits(raw);
+    outputContent.innerHTML = result; //.replace(/\n/g, '<br>');
+    output.style.display = 'block';
+});
+
+closeBtn.addEventListener('click', () => {
+    output.style.display = 'none';
+});
+
+// notes setup
+document.addEventListener('click', (e) => {
+    const allLongs = document.querySelectorAll('.note-long');
+    const target = e.target;
+
+    // If clicking on a note trigger
+    if (target.matches('.note-trigger')) {
+        // First hide all others
+        allLongs.forEach(el => el.remove());
+
+        const longText = target.dataset.long;
+        if (longText) {
+            const longSpan = document.createElement('span');
+            longSpan.className = 'note-long';
+            longSpan.textContent = longText;
+            target.parentElement.appendChild(longSpan);
+        }
+    } else {
+        // Clicked outside — remove any visible .note-long
+        allLongs.forEach(el => el.remove());
+    }
+});
+
+// processing
+
+// helper functions
+
+function tooLong(string, max) {
+  return string.length > max;
+}
+
+function allCapsSus(string) {
+  const safe = ['PR', 'QA', 'LQA', 'CEO', 'CFO', 'VP', 'CTO', '3D', '2D', 'COO', 'UI', 'VFX', 'SFX', 'FX', 'AMD', 'CCO', 'GSC', 'THQ', 'VIP', 'ATI', 'HR'];
+
+  // Split into words by space, comma, colon, or parens
+  const words = string.split(/[\s,:\(\)]+/).filter(Boolean);
+
+  // Unicode-aware regex: match strings of 2+ uppercase letters in Latin or Cyrillic
+  const uppercaseRegex = /^[\p{Lu}\p{Lt}]{2,}$/u;
+
+  return words
+    .filter(word => !safe.includes(word))
+    .filter(word => uppercaseRegex.test(word));
+}
+
+function allCaps(string) {
+
+  // Split into words by space, comma, colon, or parens
+  const words = string.split(/[\s,:\(\)]+/).filter(Boolean);
+
+  // Unicode-aware regex: match strings of 2+ uppercase letters in Latin or Cyrillic
+  const uppercaseRegex = /^[\p{Lu}\p{Lt}]{2,}$/u;
+
+  return words.filter(word => uppercaseRegex.test(word));
+}
+
+function textAfterLastComment(string) {
+  const lastParen = string.lastIndexOf(')');
+  return lastParen !== -1 && lastParen < string.length - 1;
+}
+
+function quoteOutsideComment(string) {
+  const quotes = '»“”«›‟„‹〞〝＂〟"';
+  const quoteIndex = [...string].findIndex(char => quotes.includes(char));
+  const parenIndex = string.indexOf('(');
+  return quoteIndex !== -1 && (parenIndex === -1 || quoteIndex < parenIndex);
+}
+
+function singleQuoteOutsideComment(string) {
+  const quotes = '’‘‚‛\'';
+  const quoteIndex = [...string].findIndex(char => quotes.includes(char));
+  const parenIndex = string.indexOf('(');
+  return quoteIndex !== -1 && (parenIndex === -1 || quoteIndex < parenIndex);
+}
+
+function oneWord(string) {
+  return string.trim().split(/\s+/).length === 1;
+}
+
+
+// big processing
+
+function check_credits(input) {
+    // Clean input into lines
+    let lines = input
+        .replaceAll('\u00A0', ' ') // Replace nbsp with space
+        .replaceAll(/[ ]{2,}/g, ' ') // Replace 2+ spaces with one space
+        .trim() // Trim leading/trailing whitespace
+        .split(/\r?\n/) // Split into lines
+        .map(line => line.trim()); // Trim each line
+
+    // Collapse 2+ empty lines into one
+    for (let i = lines.length - 2; i >= 0; i--) {
+        if (lines[i] === '' && lines[i + 1] === '') {
+            lines.splice(i + 1, 1);
+        }
+    }
+
+    // Convert to HTML-escaped lines with divs
+    const escapeHTML = (str) =>
+    str.replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+
+    let linesHtml = lines.map(line => {
+        const div = document.createElement('div');
+        div.className = 'line';
+        div.innerHTML = escapeHTML(line);
+        return div;
+    });
+
+    // Helper functions
+    const getText = (index) => {
+        if (index < 0 || index >= lines.length)
+            return '';
+        return lines[index];
+    };
+
+    const isEmpty = (index) => {
+        if (index < 0 || index >= lines.length)
+            return true;
+        return lines[index].trim() === '';
+    };
+
+    const addNote = (index, type, short, long) => {
+        if (index < 0 || index >= linesHtml.length)
+            return;
+
+        const span = document.createElement('span');
+        span.className = `note ${type}`;
+        span.textContent = ` ${short} `;
+
+        const trigger = document.createElement('span');
+        trigger.className = 'note-trigger';
+        trigger.textContent = '[?]';
+        trigger.dataset.long = long;
+
+        span.appendChild(trigger);
+        linesHtml[index].appendChild(span);
+    };
+
+    const addClass = (index, className) => {
+        if (index < 0 || index >= linesHtml.length)
+            return;
+        linesHtml[index].classList.add(className);
+    };
+
+    const removeClass = (index, className) => {
+        if (index < 0 || index >= linesHtml.length)
+            return;
+        linesHtml[index].classList.remove(className);
+    };
+
+    // Main loop for line-by-line processing
+    for (let i = 0; i < lines.length; i++) {
+        const currentText = getText(i);
+        const prevText = getText(i - 1);
+        const nextText = getText(i + 1);
+
+        // Example usage of helpers — you can customize or replace this
+        /*
+        if (isEmpty(i)) {
+        addClass(i, 'empty-line');
+        }
+        if (!isEmpty(i) && isEmpty(i + 1)) {
+        addNote(i, 'info', 'Line ends a group');
+        }
+         */
+        // mark if first is role
+        if (i == 0 && !isEmpty(i + 1)) {
+            addNote(i, 'error', 'non-group', 'First line must be group, use game name if none in credits');
+        }
+        // mark if last is group/role
+        if (isEmpty(i - 1) && !isEmpty(i) && isEmpty(i + 1) && isEmpty(i + 2)) {
+            addNote(i, 'error', 'incomplete', 'Looks like a cut-off group or role title');
+        }
+        // mark groups with empty roles
+        if (isEmpty(i - 1) && !isEmpty(i) && isEmpty(i + 1) && !isEmpty(i + 2) && isEmpty(i + 3)) {
+            addNote(i, 'error', 'faux group', 'Multi-level group or empty role title detected. This line will not import');
+        }
+        // mark groups
+        else if (isEmpty(i - 1) && !isEmpty(i) && isEmpty(i + 1)) {
+            addClass(i, 'group');
+			
+			// check too long
+			if (tooLong(currentText, 255)) {
+				addNote(i, 'error', 'too long',currentText.length + ' is too long, group titles may only use 255 characters');
+			}
+			
+			// check allcaps
+			caps = allCapsSus(currentText);
+			if (caps.length > 0) {
+				addNote(i, 'warning', 'CAPS', caps.join(' ') + ' Usually only acronyms in group titles may be ALLCAPS');
+			}
+        }
+        // mark roles
+        else if (isEmpty(i - 1) && !isEmpty(i) && !isEmpty(i + 1)) {
+            addClass(i, 'role');
+			
+			// check too long
+			if (tooLong(currentText, 255)) {
+				addNote(i, 'error', 'too long',currentText.length + ' is too long, role titles may only use 255 characters');
+			}
+			
+			// check allcaps
+			caps = allCapsSus(currentText);
+			if (caps.length > 0) {
+				addNote(i, 'warning', 'CAPS', caps.join(' ') + ' Usually only acronyms in role titles may be ALLCAPS');
+			}
+        }
+        // mark names
+        else if (!isEmpty(i)) {
+            addClass(i, 'name');
+			
+			// check too long
+			if (tooLong(currentText, 500)) {
+				addNote(i, 'error', 'too long',currentText.length + ' is too long, names may only use 500 characters');
+			}
+			
+			// check allcaps
+			caps = allCaps(currentText);
+			if (caps.length > 0) {
+				addNote(i, 'warning', 'CAPS', caps.join(' ') + ' Real names may not be ALLCAPS, might be fine if correct pseudonym');
+			}
+			
+			// check text after comments
+			if (textAfterLastComment(currentText)) {
+				addNote(i, 'info', ')text', 'Check for parenthesis mid-name, must likely be moved to back');
+			}
+			
+			// quotations before parenthesis
+			if (quoteOutsideComment(currentText)) {
+				addNote(i, 'warning', '"', 'Might have to move quoted pseudonyms to the end, into parenthesis');
+			}
+			
+			// single quotations before parenthesis
+			if (singleQuoteOutsideComment(currentText)) {
+				addNote(i, 'info', '\'', '(Likely false positive if apostrophe) Might have to move quoted pseudonyms to the end, into parenthesis');
+			}
+			
+			// single word
+			if (oneWord(currentText)) {
+				addNote(i, 'info', 'wrd', 'Just FYI in case this is missing words or needs a (credited as ...)');
+			}
+			
+        } else {
+            addClass(i, 'blank');
+        }
+    }
+
+    // Output final HTML
+    return linesHtml.map(div => div.outerHTML).join('\n');
+}
+
+</script>
+</body>
+</html>
