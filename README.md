@@ -41,3 +41,8 @@ Nguyễn ("Thị") Ánh
 
 Public Relations
 ```
+
+
+## Note to self
+
+https://colourcontrast.cc/ is ok for quicktesting colors right now
