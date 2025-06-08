@@ -70,7 +70,7 @@
       background-color: #111;
       color: #eee;
       overflow-y: auto;
-      padding: 2rem;
+      /*padding: 2rem;*/
       box-sizing: border-box;
       display: none;
     }
@@ -97,6 +97,7 @@
 	/* Group Styles */
 	.group {
 	  color: #d9c593;
+		background-color: #333;
 	  font-variant: small-caps;
 	  font-size: 250%;
 	  font-weight: bold;
@@ -137,17 +138,23 @@
 	
 	/* Notes */
 	.note {
+		font-size: small;
 	  display: inline;
 	  margin-left: 0.5em;
 	  font-weight: normal;
+		padding: 2px;
+		border-radius: 4px;
 	}
 
 	.note-trigger {
-	  color: #007acc;
+	  color: white;
 	  cursor: pointer;
-	  text-decoration: underline;
+	  /*text-decoration: underline;*/
 	  margin-left: 0.25em;
 	  user-select: none;
+	}
+	.warning .note-trigger {
+	  color: black;
 	}
 
 	.note-long {
@@ -231,6 +238,10 @@ document.addEventListener('click', (e) => {
 
 function tooLong(string, max) {
   return string.length > max;
+}
+
+function ltgt(string) {
+  return /[<>]/.test(string);
 }
 
 function allCapsSus(string) {
@@ -334,11 +345,12 @@ function check_credits(input) {
 
         const span = document.createElement('span');
         span.className = `note ${type}`;
-        span.textContent = ` ${short} `;
+        span.innerHTML = ` ${short}`;
 
         const trigger = document.createElement('span');
         trigger.className = 'note-trigger';
-        trigger.textContent = '[?]';
+        trigger.textContent = '🛈';
+				trigger.setAttribute('title', long);
         trigger.dataset.long = long;
 
         span.appendChild(trigger);
@@ -372,6 +384,11 @@ function check_credits(input) {
         addNote(i, 'info', 'Line ends a group');
         }
          */
+				// < > less than greater than lt gt
+				if (ltgt(currentText)) {
+					addNote(i, 'error', 'lt/gt forbidden (<a href="https://fishiecat.github.io/gt-lt-alt/" target="_blank">alt</a>)', 'Less than and greater than HTML characters are not allowed');
+				}
+				 
         // mark if first is role
         if (i == 0 && !isEmpty(i + 1)) {
             addNote(i, 'error', 'non-group', 'First line must be group, use game name if none in credits');
@@ -446,7 +463,7 @@ function check_credits(input) {
 			
 			// single word
 			if (oneWord(currentText)) {
-				addNote(i, 'info', 'wrd', 'Just FYI in case this is missing words or needs a (credited as ...)');
+				addNote(i, 'info', 'w', 'Just FYI in case this is missing words or needs a (credited as ...)');
 			}
 			
         } else {
